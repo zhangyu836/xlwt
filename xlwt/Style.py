@@ -67,13 +67,6 @@ class StyleCollection(object):
         self._font_x2id = {}
         self._font_val2x = {}
 
-        for x in (0, 1, 2, 3, 5): # The font with index 4 is omitted in all BIFF versions
-            font = Formatting.Font()
-            search_key = font._search_key()
-            self._font_id2x[font] = x
-            self._font_x2id[x] = font
-            self._font_val2x[search_key] = x
-
         self._xf_id2x = {}
         self._xf_x2id = {}
         self._xf_val2x = {}
@@ -84,12 +77,23 @@ class StyleCollection(object):
         for fmtidx, fmtstr in zip(range(37, 50), StyleCollection._std_num_fmt_list[23:]):
             self._num_formats[fmtstr] = fmtidx
 
-        self.default_style = XFStyle()
-        self._default_xf = self._add_style(self.default_style)[0]
+
+    def add_default_style(self, style_list):
+        # The default cell format is described by the XF record with the fixed index 15 (0-based).
+        # By default, it uses the worksheet/workbook default cell style, described by the very first XF record (index 0).
+        # Excel measures column width units based on the width of the zero character, using default font (first FONT record in the file).
+
+        for index, wtxf in enumerate(style_list):
+            self._add_style(wtxf)
+            if index == 15:
+                return
+        wtxf = style_list[0]
+        for _ in range(15 - index):
+            self._add_style(wtxf)
 
     def add(self, style):
         if style == None:
-            return 0x10
+            return 0x0
         return self._add_style(style)[1]
 
     def _add_style(self, style):
@@ -115,13 +119,19 @@ class StyleCollection(object):
                 self._font_id2x[font] = font_idx
                 self.stats[1] += 1
             else:
-                font_idx = len(self._font_x2id) + 1 # Why plus 1? Font 4 is missing
+                #font_idx = len(self._font_x2id) + 1 # Why plus 1? Font 4 is missing
+                font_idx = len(self._font_x2id)
+                if font_idx >= 4:
+                    font_idx += 1
                 self._font_id2x[font] = font_idx
                 self._font_val2x[search_key] = font_idx
                 self._font_x2id[font_idx] = font
                 self.stats[2] += 1
         else:
-            font_idx = len(self._font_id2x) + 1
+            #font_idx = len(self._font_id2x) + 1
+            font_idx = len(self._font_id2x)
+            if font_idx >= 4:
+                font_idx += 1
             self._font_id2x[font] = font_idx
             self.stats[2] += 1
 
@@ -133,17 +143,18 @@ class StyleCollection(object):
         elif self.style_compression == 2:
             xf_key = (font_idx, num_format_idx) + tuple(obj._search_key() for obj in gof)
             xf_index = self._xf_val2x.get(xf_key)
-            if xf_index is not None:
+            xf_len = len(self._xf_x2id)
+            if xf_len > 15 and xf_index is not None:
                 self._xf_id2x[xf] = xf_index
                 self.stats[4] += 1
             else:
-                xf_index = 0x10 + len(self._xf_x2id)
+                xf_index = xf_len #0x0 + len(self._xf_x2id)
                 self._xf_id2x[xf] = xf_index
                 self._xf_val2x[xf_key] = xf_index
                 self._xf_x2id[xf_index] = xf
                 self.stats[5] += 1
         else:
-            xf_index = 0x10 + len(self._xf_id2x)
+            xf_index = len(self._xf_id2x)#0x0 +
             self._xf_id2x[xf] = xf_index
             self.stats[5] += 1
 
@@ -167,13 +178,19 @@ class StyleCollection(object):
                 self._font_id2x[font] = font_idx
                 self.stats[1] += 1
             else:
-                font_idx = len(self._font_x2id) + 1 # Why plus 1? Font 4 is missing
+                #font_idx = len(self._font_x2id) + 1 # Why plus 1? Font 4 is missing
+                font_idx = len(self._font_x2id)
+                if font_idx >= 4:
+                    font_idx += 1
                 self._font_id2x[font] = font_idx
                 self._font_val2x[search_key] = font_idx
                 self._font_x2id[font_idx] = font
                 self.stats[2] += 1
         else:
-            font_idx = len(self._font_id2x) + 1
+            #font_idx = len(self._font_id2x) + 1
+            font_idx = len(self._font_id2x)
+            if font_idx >= 4:
+                font_idx += 1
             self._font_id2x[font] = font_idx
             self.stats[2] += 1
 
@@ -212,8 +229,8 @@ class StyleCollection(object):
 
     def _all_cell_styles(self):
         result = b''
-        for i in range(0, 16):
-            result += XFRecord(self._default_xf, 'style').get()
+        #for i in range(0, 16):
+        #    result += XFRecord(self._default_xf, 'style').get()
         if self.style_compression == 2:
             styles = self._xf_x2id.items()
         else:
