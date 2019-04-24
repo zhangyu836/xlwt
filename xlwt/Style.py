@@ -80,7 +80,7 @@ class StyleCollection(object):
 
     def add_default_style(self, style_list):
         # The default cell format is described by the XF record with the fixed index 15 (0-based).
-        # By default, it uses the worksheet/workbook default cell style, described by the very first XF record (index 0).
+        # By default, Excel uses the worksheet/workbook default cell style, described by the very first XF record (index 0).
         # Excel measures column width units based on the width of the zero character, using default font (first FONT record in the file).
 
         for index, wtxf in enumerate(style_list):
