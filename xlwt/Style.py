@@ -149,6 +149,8 @@ class StyleCollection(object):
                 self.stats[4] += 1
             else:
                 xf_index = xf_len #0x0 + len(self._xf_x2id)
+                if xf_index == 0:
+                    self.default_style = xf
                 self._xf_id2x[xf] = xf_index
                 self._xf_val2x[xf_key] = xf_index
                 self._xf_x2id[xf_index] = xf
@@ -236,7 +238,10 @@ class StyleCollection(object):
         else:
             styles = [(x, o) for o, x in self._xf_id2x.items()]
         for xf_idx, xf in sorted(styles):
-            result += XFRecord(xf).get()
+            if xf_idx < 16:
+                result += XFRecord(xf, 'style').get()
+            else:
+                result += XFRecord(xf).get()
         return result
 
     def _all_styles(self):
